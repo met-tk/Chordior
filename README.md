@@ -4,6 +4,7 @@
 > 跨越 PC 桌面端与 Android 移动端的现代音乐理论探索、和弦声部诱导与和声编曲利器。
 
 ---
+![Uploading ad4fa5ed5f3288cd013b53365d978a4c.jpg…]()
 
 ## 📖 项目简介 (Overview)
 
