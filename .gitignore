@@ -1,0 +1,37 @@
+# Python build & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.spec.bak
+build/
+dist/
+*.egg-info/
+audio_cache/
+
+# Flutter / Dart build & cache
+chordior_flutter/build/
+chordior_flutter/.dart_tool/
+chordior_flutter/.flutter-plugins
+chordior_flutter/.flutter-plugins-dependencies
+chordior_flutter/.packages
+chordior_flutter/.pub-cache/
+chordior_flutter/.pub/
+
+# Android build & local settings
+chordior_flutter/android/.gradle/
+chordior_flutter/android/local.properties
+chordior_flutter/android/app/build/
+chordior_flutter/android/build/
+*.apk.sha1
+
+# IDE & Editor caches
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Project temporary scratch directory
+scratch/

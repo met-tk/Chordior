@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Chordior">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Chordior</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script>
+    // Chordior 录音棚级高保真声学引擎 (真实名琴采样 + 物理建模 + 母带空间混响)
+    let _audioCtx = null;
+    let _masterCompressor = null;
+    let _reverbNode = null;
+    let _reverbGain = null;
+    let _dryGain = null;
+
+    // 6 大真实乐器母带级多采样音源表 (本地 .bin 无损二进制音频流，彻底免疫浏览器/IDM/迅雷等下载插件的后缀嗅探拦截)
+    const INSTRUMENT_BANKS = {
+      'Concert Grand': {
+        dir: 'piano',
+        notes: [
+          { note: 'C2', midi: 36 }, { note: 'Ds2', midi: 39 }, { note: 'Fs2', midi: 42 }, { note: 'A2', midi: 45 },
+          { note: 'C3', midi: 48 }, { note: 'Ds3', midi: 51 }, { note: 'Fs3', midi: 54 }, { note: 'A3', midi: 57 },
+          { note: 'C4', midi: 60 }, { note: 'Ds4', midi: 63 }, { note: 'Fs4', midi: 66 }, { note: 'A4', midi: 69 },
+          { note: 'C5', midi: 72 }, { note: 'Ds5', midi: 75 }, { note: 'Fs5', midi: 78 }, { note: 'A5', midi: 81 },
+          { note: 'C6', midi: 84 }
+        ]
+      },
+      'Acoustic Guitar': {
+        dir: 'guitar_steel',
+        notes: [
+          { note: 'C2', midi: 36 }, { note: 'Eb2', midi: 39 }, { note: 'Gb2', midi: 42 }, { note: 'A2', midi: 45 },
+          { note: 'C3', midi: 48 }, { note: 'Eb3', midi: 51 }, { note: 'Gb3', midi: 54 }, { note: 'A3', midi: 57 },
+          { note: 'C4', midi: 60 }, { note: 'Eb4', midi: 63 }, { note: 'Gb4', midi: 66 }, { note: 'A4', midi: 69 },
+          { note: 'C5', midi: 72 }, { note: 'Eb5', midi: 75 }, { note: 'Gb5', midi: 78 }, { note: 'A5', midi: 81 },
+          { note: 'C6', midi: 84 }
+        ]
+      },
+      'Nylon Guitar': {
+        dir: 'guitar_nylon',
+        notes: [
+          { note: 'C2', midi: 36 }, { note: 'Eb2', midi: 39 }, { note: 'Gb2', midi: 42 }, { note: 'A2', midi: 45 },
+          { note: 'C3', midi: 48 }, { note: 'Eb3', midi: 51 }, { note: 'Gb3', midi: 54 }, { note: 'A3', midi: 57 },
+          { note: 'C4', midi: 60 }, { note: 'Eb4', midi: 63 }, { note: 'Gb4', midi: 66 }, { note: 'A4', midi: 69 },
+          { note: 'C5', midi: 72 }, { note: 'Eb5', midi: 75 }, { note: 'Gb5', midi: 78 }, { note: 'A5', midi: 81 },
+          { note: 'C6', midi: 84 }
+        ]
+      },
+      'Fender Rhodes': {
+        dir: 'rhodes',
+        notes: [
+          { note: 'C2', midi: 36 }, { note: 'Eb2', midi: 39 }, { note: 'Gb2', midi: 42 }, { note: 'A2', midi: 45 },
+          { note: 'C3', midi: 48 }, { note: 'Eb3', midi: 51 }, { note: 'Gb3', midi: 54 }, { note: 'A3', midi: 57 },
+          { note: 'C4', midi: 60 }, { note: 'Eb4', midi: 63 }, { note: 'Gb4', midi: 66 }, { note: 'A4', midi: 69 },
+          { note: 'C5', midi: 72 }, { note: 'Eb5', midi: 75 }, { note: 'Gb5', midi: 78 }, { note: 'A5', midi: 81 },
+          { note: 'C6', midi: 84 }
+        ]
+      },
+      'Church Organ': {
+        dir: 'organ',
+        notes: [
+          { note: 'C2', midi: 36 }, { note: 'Eb2', midi: 39 }, { note: 'Gb2', midi: 42 }, { note: 'A2', midi: 45 },
+          { note: 'C3', midi: 48 }, { note: 'Eb3', midi: 51 }, { note: 'Gb3', midi: 54 }, { note: 'A3', midi: 57 },
+          { note: 'C4', midi: 60 }, { note: 'Eb4', midi: 63 }, { note: 'Gb4', midi: 66 }, { note: 'A4', midi: 69 },
+          { note: 'C5', midi: 72 }, { note: 'Eb5', midi: 75 }, { note: 'Gb5', midi: 78 }, { note: 'A5', midi: 81 },
+          { note: 'C6', midi: 84 }
+        ]
+      },
+      'Celesta & Bells': {
+        dir: 'celesta',
+        notes: [
+          { note: 'C2', midi: 36 }, { note: 'Eb2', midi: 39 }, { note: 'Gb2', midi: 42 }, { note: 'A2', midi: 45 },
+          { note: 'C3', midi: 48 }, { note: 'Eb3', midi: 51 }, { note: 'Gb3', midi: 54 }, { note: 'A3', midi: 57 },
+          { note: 'C4', midi: 60 }, { note: 'Eb4', midi: 63 }, { note: 'Gb4', midi: 66 }, { note: 'A4', midi: 69 },
+          { note: 'C5', midi: 72 }, { note: 'Eb5', midi: 75 }, { note: 'Gb5', midi: 78 }, { note: 'A5', midi: 81 },
+          { note: 'C6', midi: 84 }
+        ]
+      }
+    };
+
+    const _multiSampleBuffers = new Map(); // key = `${instName}_${midi}` -> AudioBuffer
+    const _rawBinCache = new Map(); // 原始二进制字节流内存缓存
+    const _loadingBanks = new Set();
+
+    // 页面初次加载时立即在后台预取默认大三角钢琴的二进制切片流
+    function prefetchDefaultConcertGrand() {
+      const bank = INSTRUMENT_BANKS['Concert Grand'];
+      if (!bank) return;
+      bank.notes.forEach(async (item) => {
+        try {
+          const url = `./assets/${bank.dir}/${item.note}.bin`;
+          if (!_rawBinCache.has(url)) {
+            const resp = await fetch(url);
+            if (resp.ok) {
+              const ab = await resp.arrayBuffer();
+              _rawBinCache.set(url, ab);
+            }
+          }
+        } catch (_) {}
+      });
+    }
+    prefetchDefaultConcertGrand();
+
+    // 极速预载并解码指定乐器的真实原声采样
+    async function preloadInstrumentSamples(ctx, instName) {
+      const bank = INSTRUMENT_BANKS[instName];
+      if (!bank) return;
+      if (_loadingBanks.has(instName)) {
+        // 如果正在加载中，轮询等待其完成 (最大 300ms)
+        let waitCount = 0;
+        while (_loadingBanks.has(instName) && waitCount < 30) {
+          await new Promise(r => setTimeout(r, 10));
+          waitCount++;
+        }
+        return;
+      }
+      _loadingBanks.add(instName);
+
+      try {
+        await Promise.all(bank.notes.map(async (item) => {
+          const key = `${instName}_${item.midi}`;
+          if (_multiSampleBuffers.has(key)) return;
+
+          try {
+            const url = `./assets/${bank.dir}/${item.note}.bin`;
+            let ab = _rawBinCache.get(url);
+            if (!ab) {
+              const response = await fetch(url);
+              if (response && response.ok) {
+                ab = await response.arrayBuffer();
+                _rawBinCache.set(url, ab);
+              }
+            }
+            if (ab) {
+              // 使用 slice(0) 保护 ArrayBuffer 不被 decodeAudioData neutered
+              const decoded = await ctx.decodeAudioData(ab.slice(0));
+              _multiSampleBuffers.set(key, decoded);
+            }
+          } catch (e) {
+            // 静默安全兜底
+          }
+        }));
+      } finally {
+        _loadingBanks.delete(instName);
+      }
+    }
+
+    // 暴露给 Flutter 的音色切换预热钩子
+    window.chordiorSetTimbre = function(timbre) {
+      const ctx = getAudioContext();
+      if (ctx && INSTRUMENT_BANKS[timbre]) {
+        preloadInstrumentSamples(ctx, timbre);
+      }
+    };
+
+    function getAudioContext() {
+      if (!_audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          _audioCtx = new AudioContextClass();
+          _initMasterBus(_audioCtx);
+          preloadInstrumentSamples(_audioCtx, 'Concert Grand');
+        }
+      }
+      if (_audioCtx && _audioCtx.state === 'suspended') {
+        _audioCtx.resume();
+      }
+      return _audioCtx;
+    }
+
+    // 在用户与页面的任何初次接触瞬间立即提前唤醒 AudioContext 并完成解码
+    const _warmupAudio = () => {
+      const ctx = getAudioContext();
+      if (ctx) {
+        preloadInstrumentSamples(ctx, 'Concert Grand');
+      }
+      window.removeEventListener('pointerdown', _warmupAudio);
+      window.removeEventListener('touchstart', _warmupAudio);
+      window.removeEventListener('keydown', _warmupAudio);
+    };
+    window.addEventListener('pointerdown', _warmupAudio);
+    window.addEventListener('touchstart', _warmupAudio);
+    window.addEventListener('keydown', _warmupAudio);
+
+    // 初始化母带总线与空间混响环境
+    function _initMasterBus(ctx) {
+      // 1. 母带动态限制器 (彻底杜绝多音齐奏时的削波与杂音)
+      _masterCompressor = ctx.createDynamicsCompressor();
+      _masterCompressor.threshold.setValueAtTime(-14, ctx.currentTime);
+      _masterCompressor.knee.setValueAtTime(24, ctx.currentTime);
+      _masterCompressor.ratio.setValueAtTime(8, ctx.currentTime);
+      _masterCompressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      _masterCompressor.release.setValueAtTime(0.18, ctx.currentTime);
+      _masterCompressor.connect(ctx.destination);
+
+      // 2. 高品质音乐厅空间冲激响应 (Plate / Hall Reverb)
+      _reverbNode = ctx.createConvolver();
+      _reverbNode.buffer = _buildImpulseResponse(ctx, 1.4, 2.2);
+
+      _dryGain = ctx.createGain();
+      _dryGain.gain.setValueAtTime(0.82, ctx.currentTime);
+      _dryGain.connect(_masterCompressor);
+
+      _reverbGain = ctx.createGain();
+      _reverbGain.gain.setValueAtTime(0.18, ctx.currentTime); // 18% 柔和湿声混响
+      _reverbNode.connect(_reverbGain);
+      _reverbGain.connect(_masterCompressor);
+    }
+
+    // 生成自然的立体声声学混响冲激响应
+    function _buildImpulseResponse(ctx, duration, decay) {
+      const rate = ctx.sampleRate;
+      const length = Math.floor(rate * duration);
+      const impulse = ctx.createBuffer(2, length, rate);
+      const left = impulse.getChannelData(0);
+      const right = impulse.getChannelData(1);
+
+      for (let i = 0; i < length; i++) {
+        const t = i / length;
+        const env = Math.exp(-t * decay);
+        left[i] = ((Math.random() * 2) - 1) * env;
+        right[i] = ((Math.random() * 2) - 1) * env;
+      }
+      return impulse;
+    }
+
+    // 内存极速物理物理建模波形缓存
+    const _bufferCache = new Map();
+
+    function getOrCreateToneBuffer(ctx, freq, timbre, duration) {
+      const key = `${timbre}_${freq.toFixed(2)}_${duration}`;
+      if (_bufferCache.has(key)) {
+        return _bufferCache.get(key);
+      }
+
+      const sampleRate = ctx.sampleRate;
+      const numSamples = Math.floor(sampleRate * duration);
+      const buffer = ctx.createBuffer(2, numSamples, sampleRate);
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
+
+      // 空间声场立体声声相展开 (低音偏左、高音偏右)
+      const pan = Math.min(0.4, Math.max(-0.4, ((Math.log2(freq / 261.63)) * 0.18)));
+      const leftPan = Math.cos((pan + 1) * Math.PI / 4);
+      const rightPan = Math.sin((pan + 1) * Math.PI / 4);
+
+      if (timbre === 'Concert Grand') {
+        // 正统音乐会大三角钢琴：深沉浑厚的木质低音与圆润柔美中高音，柔软毛毡击槌
+        const grandHarmonics = [
+          [1.0, 1.00, 1.8],
+          [2.0, 0.70, 2.6],
+          [3.0, 0.28, 4.0],
+          [4.0, 0.12, 6.2],
+          [5.0, 0.05, 8.5],
+        ];
+
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          let sample = 0;
+          for (let h = 0; h < grandHarmonics.length; h++) {
+            const mult = grandHarmonics[h][0];
+            const amp = grandHarmonics[h][1];
+            const decay = grandHarmonics[h][2];
+            const detune = 1.0 + 0.0003 * (mult - 1);
+            sample += amp * Math.sin(2 * Math.PI * freq * mult * detune * t) * Math.exp(-decay * t);
+          }
+          // 毛毡琴槌软接触 (柔和上升，无尖锐噪声)
+          if (t < 0.012) {
+            sample *= Math.sin((t / 0.012) * Math.PI / 2);
+          }
+          sample *= 0.35;
+          left[i] = sample * leftPan;
+          right[i] = sample * rightPan;
+        }
+      } else if (timbre === 'Fender Rhodes' || timbre === 'Electric Piano') {
+        // Rhodes 现代电钢琴调频模型 (双载波 FM + 次谐波)
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          const mod = 0.85 * Math.exp(-4.2 * t) * Math.sin(2 * Math.PI * (freq * 2.0) * t);
+          const carrier = Math.sin(2 * Math.PI * freq * t + mod);
+          const sub = 0.3 * Math.sin(2 * Math.PI * (freq * 2.0) * t) * Math.exp(-3.0 * t);
+          const third = 0.12 * Math.sin(2 * Math.PI * (freq * 3.0) * t) * Math.exp(-5.0 * t);
+          let sample = (carrier * Math.exp(-2.0 * t) + sub + third) * 0.48;
+
+          if (t < 0.006) sample *= (t / 0.006);
+          left[i] = sample * leftPan;
+          right[i] = sample * rightPan;
+        }
+      } else if (timbre === 'Warm Synth Pad' || timbre === 'Synth Pad') {
+        // 温暖氛围合成器 (三路微失谐锯齿波 + 宽立体声慢起)
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          let sample = (
+            0.45 * Math.sin(2 * Math.PI * freq * 0.997 * t) +
+            0.45 * Math.sin(2 * Math.PI * freq * 1.003 * t) +
+            0.25 * Math.sin(2 * Math.PI * freq * 2.0 * t)
+          ) * Math.exp(-0.7 * t) * 0.40;
+
+          if (t < 0.12) sample *= (t / 0.12);
+          left[i] = sample * leftPan;
+          right[i] = sample * rightPan;
+        }
+      } else if (timbre === 'Church Organ') {
+        // 宏伟教堂管风琴 (16' + 8' + 4' + 2' 复合风管谐波，庄严持久)
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          let sample = (
+            0.45 * Math.sin(2 * Math.PI * (freq * 0.5) * t) +
+            1.00 * Math.sin(2 * Math.PI * freq * t) +
+            0.55 * Math.sin(2 * Math.PI * (freq * 2.0) * t) +
+            0.25 * Math.sin(2 * Math.PI * (freq * 4.0) * t)
+          ) * Math.exp(-0.35 * t) * 0.28;
+
+          if (t < 0.03) sample *= (t / 0.03);
+          left[i] = sample * leftPan;
+          right[i] = sample * rightPan;
+        }
+      } else if (timbre === 'Nylon Guitar') {
+        // 古典尼龙弦吉他 (高频暗沉柔和，指腹触弦温润感)
+        const nylonHarmonics = [
+          [1.0, 1.00, 3.2],
+          [2.0, 0.45, 4.5],
+          [3.0, 0.18, 6.0],
+          [4.0, 0.08, 8.0]
+        ];
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          let sample = 0;
+          for (let h = 0; h < nylonHarmonics.length; h++) {
+            sample += nylonHarmonics[h][1] * Math.sin(2 * Math.PI * freq * nylonHarmonics[h][0] * t) * Math.exp(-nylonHarmonics[h][2] * t);
+          }
+          if (t < 0.008) sample *= (t / 0.008);
+          sample *= 0.36;
+          left[i] = sample * leftPan;
+          right[i] = sample * rightPan;
+        }
+      } else if (timbre === 'Celesta & Bells') {
+        // 钢片琴与音乐盒 (清亮晶莹金属音，非谐泛音结构)
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          let sample = (
+            1.00 * Math.sin(2 * Math.PI * freq * t) * Math.exp(-2.2 * t) +
+            0.40 * Math.sin(2 * Math.PI * freq * 2.756 * t) * Math.exp(-3.8 * t) +
+            0.20 * Math.sin(2 * Math.PI * freq * 5.404 * t) * Math.exp(-5.5 * t)
+          ) * 0.35;
+          if (t < 0.003) sample *= (t / 0.003);
+          left[i] = sample * leftPan;
+          right[i] = sample * rightPan;
+        }
+      } else {
+        // Acoustic Guitar (原声木吉他 / 原 Grand Piano)：7 级泛音 + 拨片冲击瞬态
+        const harmonics = [
+          [1.0, 1.00, 2.5],
+          [2.0, 0.62, 3.5],
+          [3.0, 0.38, 4.6],
+          [4.0, 0.22, 5.8],
+          [5.0, 0.12, 7.2],
+          [6.0, 0.06, 8.8],
+          [7.0, 0.03, 10.5]
+        ];
+
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          let sample = 0;
+
+          for (let h = 0; h < harmonics.length; h++) {
+            const mult = harmonics[h][0];
+            const amp = harmonics[h][1];
+            const decay = harmonics[h][2];
+            const detune = 1.0 + 0.00055 * (mult - 1);
+            sample += amp * Math.sin(2 * Math.PI * freq * mult * detune * t) * Math.exp(-decay * t);
+          }
+
+          // 清脆琴弦拨弹冲击瞬态 (Pick Attack Transient - 前 6ms)
+          if (t < 0.006) {
+            const attackRatio = t / 0.006;
+            sample *= attackRatio;
+            sample += ((Math.random() * 2) - 1) * 0.12 * Math.exp(-t * 800);
+          }
+
+          sample *= 0.28;
+          left[i] = sample * leftPan;
+          right[i] = sample * rightPan;
+        }
+      }
+
+      // 彻底消除末尾截断爆音与滋滋声：最后 120ms 强制应用余弦平滑消隐窗 (Half-Hann Envelope)
+      const fadeSamples = Math.min(numSamples, Math.floor(sampleRate * 0.12));
+      for (let i = numSamples - fadeSamples; i < numSamples; i++) {
+        const progress = (numSamples - 1 - i) / fadeSamples; // 1.0 -> 0.0
+        const fade = 0.5 * (1 - Math.cos(progress * Math.PI)); // 导数连续归零
+        left[i] *= fade;
+        right[i] *= fade;
+      }
+
+      _bufferCache.set(key, buffer);
+      return buffer;
+    }
+
+    // 活跃和弦音轨追踪器 (用于换和弦时柔和阻尼衰减前序和弦余音，防止声音混叠堆叠)
+    let _activeChordGains = [];
+
+    // 播放和弦：多音并发调度、支持扫弦、琶音、可调延音时长与换和弦柔和衰减
+    window.chordiorPlayChord = async function(frequencies, volume, timbre, mode, speedMs, sustainSec, dampPrevious) {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        const currentTimbre = timbre || 'Concert Grand';
+        const bank = INSTRUMENT_BANKS[currentTimbre];
+
+        // 关键防护：如果当前选定的是真实采样乐器，且该乐器采样尚未全部就绪，立即等待解码（本地仅需数毫秒）
+        // 确保用户刚进软件的第 1 次点击 100% 就是真实采样原声，彻底绝不退回到合成器！
+        if (bank && !_multiSampleBuffers.has(`${currentTimbre}_${bank.notes[0].midi}`)) {
+          await preloadInstrumentSamples(ctx, currentTimbre);
+        }
+
+        const now = ctx.currentTime;
+        const shouldDamp = (dampPrevious !== false);
+
+        // 如果开启换和弦柔和消音：对正在鸣响的上一个和弦音轨施加 160ms 声学指数阻尼，温润淡出
+        if (shouldDamp && _activeChordGains.length > 0) {
+          const dampDuration = 0.16;
+          _activeChordGains.forEach((g) => {
+            try {
+              g.gain.cancelScheduledValues(now);
+              const currentVal = Math.max(0.0001, g.gain.value);
+              g.gain.setValueAtTime(currentVal, now);
+              g.gain.exponentialRampToValueAtTime(0.0001, now + dampDuration);
+            } catch (_) {}
+          });
+          _activeChordGains = [];
+        }
+
+        const vol = volume || 0.85;
+        const currentMode = mode || 'Simultaneous';
+
+        // 默认声学发声时长 (若传入自定义时长则优先遵循，支持 0.8s ~ 4.0s)
+        const customDuration = (typeof sustainSec === 'number' && sustainSec >= 0.5) ? sustainSec : null;
+        const defaultDuration = (
+          currentTimbre === 'Church Organ' ||
+          currentTimbre === 'Warm Synth Pad' ||
+          currentTimbre === 'Synth Pad'
+        ) ? 2.6 : 2.0;
+
+        let delayGap = 0;
+        if (currentMode === 'Pop Strum') {
+          // 自定义流行扫弦速度 (15ms ~ 120ms，默认 35ms)
+          delayGap = (typeof speedMs === 'number' && speedMs >= 10 && speedMs <= 200) ? (speedMs / 1000.0) : 0.035;
+        } else if (currentMode.includes('Arp') || currentMode === 'Arpeggio') {
+          delayGap = (speedMs && speedMs > 20) ? (speedMs / 1000.0) : 0.10;
+        }
+
+        let freqs = [...frequencies];
+        if (currentMode === 'Arp Down') {
+          freqs.reverse();
+        } else if (currentMode === 'Arp Up-Down' && freqs.length > 2) {
+          freqs = freqs.concat(freqs.slice(1, -1).reverse());
+        }
+
+        // 根据音符数计算平滑增益系数，防止多音和弦叠加失真
+        const chordGain = vol * (1.0 / Math.sqrt(Math.max(1, freqs.length) * 0.85));
+
+        freqs.forEach((freq, index) => {
+          if (!freq || freq <= 0) return;
+          const startTime = now + (index * delayGap);
+
+          let sampleSource = null;
+          const bank = INSTRUMENT_BANKS[currentTimbre];
+
+          if (bank) {
+            // 实时预载当前选定乐器（若尚未完全缓存）
+            preloadInstrumentSamples(ctx, currentTimbre);
+
+            const targetMidi = 69.0 + 12.0 * Math.log2(freq / 440.0);
+            let bestAnchor = null;
+            let minDiff = 999;
+
+            for (const anchor of bank.notes) {
+              const key = `${currentTimbre}_${anchor.midi}`;
+              if (_multiSampleBuffers.has(key)) {
+                const diff = Math.abs(targetMidi - anchor.midi);
+                if (diff < minDiff) {
+                  minDiff = diff;
+                  bestAnchor = anchor;
+                }
+              }
+            }
+
+            if (bestAnchor && minDiff <= 6) {
+              const key = `${currentTimbre}_${bestAnchor.midi}`;
+              const sampleBuffer = _multiSampleBuffers.get(key);
+              sampleSource = ctx.createBufferSource();
+              sampleSource.buffer = sampleBuffer;
+              // 硬件级高保真变调重采样 (2 ^ (semitones / 12))
+              const pitchRatio = Math.pow(2.0, (targetMidi - bestAnchor.midi) / 12.0);
+              sampleSource.playbackRate.setValueAtTime(pitchRatio, startTime);
+            }
+          }
+
+          const source = sampleSource || ctx.createBufferSource();
+          const noteDuration = customDuration || (sampleSource ? 2.8 : defaultDuration);
+
+          if (!sampleSource) {
+            source.buffer = getOrCreateToneBuffer(ctx, freq, currentTimbre, noteDuration);
+          }
+
+          const voiceGain = ctx.createGain();
+          voiceGain.gain.setValueAtTime(chordGain, startTime);
+
+          // 自然声学阻尼衰减（模拟钢琴毛毡制音器压弦/手指离弦的自然消隐，极其自然柔和，绝无突兀断音）
+          const releaseTime = Math.min(0.28, noteDuration * 0.35);
+          const releaseStart = startTime + Math.max(0.05, noteDuration - releaseTime);
+          voiceGain.gain.setValueAtTime(chordGain, releaseStart);
+          voiceGain.gain.exponentialRampToValueAtTime(0.0001, startTime + noteDuration);
+
+          source.connect(voiceGain);
+          voiceGain.connect(_dryGain);
+          voiceGain.connect(_reverbNode);
+
+          source.start(startTime);
+          source.stop(startTime + noteDuration + 0.05);
+
+          // 记录至活跃音轨以供下一和弦柔和淡出联动
+          _activeChordGains.push(voiceGain);
+          setTimeout(() => {
+            const idx = _activeChordGains.indexOf(voiceGain);
+            if (idx !== -1) _activeChordGains.splice(idx, 1);
+          }, (noteDuration + 0.1) * 1000);
+        });
+      } catch (e) {
+        console.error("Audio error: ", e);
+      }
+    };
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
