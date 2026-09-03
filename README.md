@@ -1,5 +1,5 @@
 # Chordior - 专业和弦与调式罗盘套件 (Music Theory & Chord Progression Suite)
-
+本md文件由AI生成。
 > **AI-driven by: taketo**  
 > 跨越 PC 桌面端与 Android 移动端的现代音乐理论探索、和弦声部诱导与和声编曲利器。
 
