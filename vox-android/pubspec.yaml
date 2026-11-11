@@ -1,0 +1,41 @@
+name: vocal_master_flutter
+description: "Vocal Range Studio - 歌唱音域确认与跟唱练习专业工作台"
+publish_to: 'none'
+
+version: 1.4.0
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.2
+  shared_preferences: ^2.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/audio/piano/
+    - assets/audio/organ/
+    - assets/audio/flute/
+    - assets/audio/violin/
+    - assets/audio/rhodes/
+    - assets/audio/guitar_steel/
+    - assets/audio/guitar_nylon/
+    - assets/audio/celesta/
+    - assets/audio/diva_voice/
+    - assets/fonts/
+
+  fonts:
+    - family: Leland
+      fonts:
+        - asset: assets/fonts/Leland.otf
+

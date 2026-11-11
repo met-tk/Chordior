@@ -1,0 +1,9 @@
+# Chordior Windows 桌面端运行与打包依赖
+# 建议使用 Python 3.7 - 3.11 (已验证环境: Python 3.7.3 + PyInstaller 5.13.2)
+
+PyQt5>=5.15.0
+numpy>=1.21.0
+Pillow>=9.0.0
+
+# 可选: 打包为单文件 .exe 时安装
+# pyinstaller>=5.13.0

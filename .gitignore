@@ -1,4 +1,5 @@
-# Python build & cache
+# Python environment, build & cache
+.venv/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,25 +9,33 @@ dist/
 *.egg-info/
 audio_cache/
 
-# Flutter / Dart build & cache
-chordior_flutter/build/
-chordior_flutter/.dart_tool/
-chordior_flutter/.flutter-plugins
-chordior_flutter/.flutter-plugins-dependencies
-chordior_flutter/.packages
-chordior_flutter/.pub-cache/
-chordior_flutter/.pub/
-
-# Android build & local settings
-chordior_flutter/android/.gradle/
-chordior_flutter/android/local.properties
-chordior_flutter/android/app/build/
-chordior_flutter/android/build/
+# Release binaries (distributed via GitHub Releases, not tracked in Git)
+*.exe
+*.apk
 *.apk.sha1
+*.aab
+
+# Flutter / Dart build & cache
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/.widget_preview/
+**/build/
+
+# Android Gradle & local SDK configuration
+**/android/.gradle/
+**/android/.kotlin/
+**/android/local.properties
+**/android/app/build/
+**/android/build/
 
 # IDE & Editor caches
 .idea/
 .vscode/
+*.iml
 *.swp
 *.swo
 *~
